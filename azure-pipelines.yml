@@ -21,9 +21,13 @@ phases:
 - template: /eng/common/templates/phases/base.yml
   parameters:
     name: Windows_NT
+    enableMicrobuild: true
     enableTelemetry: $(_enableTelemetry)
     queue:
-      name: dotnet-external-temp
+      ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
+        name: dotnet-external-temp
+      ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        name: dotnet-internal-temp
       parallel: 99
       matrix:
         debug_configuration:
@@ -47,7 +51,7 @@ phases:
       condition: always()
     variables:
       _HelixBuildConfig: $(_BuildConfig)
-
+      _SignType: test
 #- template: /eng/common/templates/phases/base.yml
 #  parameters:
 #    name: OSX
