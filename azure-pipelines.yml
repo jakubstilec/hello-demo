@@ -21,9 +21,11 @@ phases:
 - template: /eng/common/templates/phases/base.yml
   parameters:
     name: Windows_NT
-    enableMicrobuild: true
     enableTelemetry: $(_enableTelemetry)
+    enableMicrobuild: true
     queue:
+      # For public or PR jobs, use the hosted pool.  For internal jobs use the internal pool.
+      # Will eventually change this to two BYOC pools.
       ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
         name: dotnet-external-temp
       ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -32,29 +34,26 @@ phases:
       matrix:
         debug_configuration:
           _BuildConfig: Debug
+          _SignType: test
+          _DotNetPublishToBlobFeed : false
         release_configuration:
           _BuildConfig: Release
+          _SignType: test
+          _DotNetPublishToBlobFeed : true
+          
     steps:
-    - script: eng\common\cibuild.cmd
-        -configuration $(_BuildConfig)
-        -prepareMachine
+    # publishing requires some secrets from key vault
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - task: AzureKeyVault@1
+        inputs:
+          azureSubscription: 'DotNet-Engineering-Services_KeyVault'
+          KeyVaultName: EngKeyVault
+          SecretsFilter: 'dotnetfeed-storage-access-key-1,microsoft-symbol-server-pat,symweb-symbol-server-pat'
+
+    - script: eng\common\CIBuild.cmd $(_PublishArgs) -configuration $(_BuildConfig) /p:DotNetSignType=test /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
       name: Build
       displayName: Build
       condition: succeeded()
-    - template: /eng/common/templates/steps/helix-publish.yml
-      parameters:
-        
-        HelixSource: pr/your/helix/source # sources must start with pr/, official/, prodcon/, or agent/
-        HelixType: type/tests
-        # HelixBuild: $(Build.BuildNumber) -- This property is set by default
-        HelixTargetQueues: Windows.10.Amd64.Open;Windows.7.Amd64.Open
-        HelixAccessToken: $(BotAccount-dotnet-github-anon-kaonashi-bot-helix-token)
-        # HelixPreCommands: '' -- any commands that you would like to run prior to running your job
-        # HelixPostCommands: '' -- any commands that you would like to run after running your job
-        WorkItemDirectory: $(Build.SourcesDirectory)/artifacts/bin/test/$(_BuildConfig)
-        WorkItemCommand: runtests.cmd
-        EnableXUnitReporter: true # required for reporting out XUnit test results
-        # WaitForWorkItemCompletion: true -- defaults to true
     - task: PublishBuildArtifacts@1
       displayName: Publish Logs to VSTS
       inputs:
@@ -65,7 +64,25 @@ phases:
       condition: always()
     variables:
       _HelixBuildConfig: $(_BuildConfig)
-      _SignType: test
+      _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+      ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        _PublishArgs: /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1)
+          /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
+          /p:DotNetPublishToBlobFeed=$(_DotNetPublishToBlobFeed)
+          /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
+          /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
+        _OfficialBuildIdArgs: /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+      ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
+        _PublishArgs: ''
+        _OfficialBuildIdArgs: ''
+
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+  - template: /eng/common/templates/phases/publish-build-assets.yml
+    parameters:
+      dependsOn:
+        - Windows_NT
+      queue:
+        name: Hosted VS2017
 #- template: /eng/common/templates/phases/base.yml
 #  parameters:
 #    name: OSX
