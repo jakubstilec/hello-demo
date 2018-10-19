@@ -41,6 +41,19 @@ phases:
       name: Build
       displayName: Build
       condition: succeeded()
+    - template: /eng/common/templates/steps/helix-publish.yml
+      parameters:
+        HelixSource: your/helix/source
+        HelixType: type/tests
+        # HelixBuild: $(Build.BuildNumber) -- This property is set by default
+        HelixTargetQueues: Windows.10.Amd64.Open;Windows.7.Amd64.Open
+        HelixAccessToken: $(BotAccount-dotnet-github-anon-kaonashi-bot-helix-token)
+        # HelixPreCommands: '' -- any commands that you would like to run prior to running your job
+        # HelixPostCommands: '' -- any commands that you would like to run after running your job
+        WorkItemDirectory: $(Build.SourcesDirectory)/artifacts/bin/test/$(_BuildConfig)
+        WorkItemCommand: runtests.cmd
+        EnableXUnitReporter: true # required for reporting out XUnit test results
+        # WaitForWorkItemCompletion: true -- defaults to true
     - task: PublishBuildArtifacts@1
       displayName: Publish Logs to VSTS
       inputs:
