@@ -43,7 +43,8 @@ phases:
       condition: succeeded()
     - template: /eng/common/templates/steps/helix-publish.yml
       parameters:
-        HelixSource: HelixSource: pr/your/helix/source # sources must start with pr/, official/, prodcon/, or agent/
+        
+        HelixSource: pr/your/helix/source # sources must start with pr/, official/, prodcon/, or agent/
         HelixType: type/tests
         # HelixBuild: $(Build.BuildNumber) -- This property is set by default
         HelixTargetQueues: Windows.10.Amd64.Open;Windows.7.Amd64.Open
