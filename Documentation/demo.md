@@ -98,6 +98,10 @@ Requires: 4 minutes
 
 1. Follow https://github.com/dotnet/arcade/blob/master/Documentation/VSTS/SendingJobsToHelix.md documentation
 
+### OS Onboarding
+
+Talk about product builds vs Helix builds
+
 ### Dependency flow
 
 #### Publishing
