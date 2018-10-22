@@ -22,8 +22,14 @@ phases:
   parameters:
     name: Windows_NT
     enableTelemetry: $(_enableTelemetry)
+    enableMicrobuild: true
     queue:
-      name: dotnet-external-temp
+      # For public or PR jobs, use the hosted pool.  For internal jobs use the internal pool.
+      # Will eventually change this to two BYOC pools.
+      ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
+        name: dotnet-external-temp
+      ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        name: dotnet-internal-temp
       parallel: 99
       matrix:
         debug_configuration:
@@ -35,6 +41,7 @@ phases:
         -configuration $(_BuildConfig)
         -prepareMachine
         /p:DotnetSignType=test
+        /p:TeamName=DotNetCore
       name: Build
       displayName: Build
       condition: succeeded()
@@ -48,7 +55,7 @@ phases:
       condition: always()
     variables:
       _HelixBuildConfig: $(_BuildConfig)
-
+   
 #- template: /eng/common/templates/phases/base.yml
 #  parameters:
 #    name: OSX
