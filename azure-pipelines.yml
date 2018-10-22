@@ -40,7 +40,7 @@ phases:
     - script: eng\common\cibuild.cmd
         -configuration $(_BuildConfig)
         -prepareMachine
-        /p:DotnetSignType=test
+        /p:DotnetSignType=$(_SignType)
         /p:TeamName=DotNetCore
       name: Build
       displayName: Build
@@ -55,6 +55,7 @@ phases:
       condition: always()
     variables:
       _HelixBuildConfig: $(_BuildConfig)
+      _SignType: test
    
 #- template: /eng/common/templates/phases/base.yml
 #  parameters:
