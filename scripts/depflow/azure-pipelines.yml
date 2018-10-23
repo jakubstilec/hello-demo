@@ -33,8 +33,10 @@ phases:
       matrix:
         debug_configuration:
           _BuildConfig: Debug
+          _DotNetPublishToBlobFeed: false
         release_configuration:
           _BuildConfig: Release
+          _DotNetPublishToBlobFeed: false
     steps:
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - task: AzureKeyVault@1
