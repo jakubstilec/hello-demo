@@ -50,7 +50,7 @@ phases:
         /p:DotNetSignType=test
         /p:TeamName=DotNetCore
         $(_PublishArgs)
-        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+        /p:OfficialBuildId=$(BUILD.BUILDNUMBER)2
       name: Build
       displayName: Build
       condition: succeeded()
@@ -68,14 +68,6 @@ phases:
         EnableXUnitReporter: true # required for reporting out XUnit test results
         # WaitForWorkItemCompletion: true -- defaults to true
         continueOnError: true
-    # publishing requires some secrets from key vault
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-      - task: AzureKeyVault@1
-        inputs:
-          azureSubscription: 'DotNet-Engineering-Services_KeyVault'
-          KeyVaultName: EngKeyVault
-          SecretsFilter: 'dotnetfeed-storage-access-key-1,microsoft-symbol-server-pat,symweb-symbol-server-pat'
-        
     - task: PublishBuildArtifacts@1
       displayName: Publish Logs to VSTS
       inputs:
@@ -87,7 +79,6 @@ phases:
     variables:
       _HelixBuildConfig: $(_BuildConfig)
       _SignType: test
-      _DotNetPublishToBlobFeed : true
       _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
       ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         _PublishArgs: /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1)

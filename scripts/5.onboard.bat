@@ -1,0 +1,1 @@
+start microsoft-edge:https://dev.azure.com/dnceng/internal/_git/dotnet-helix-machines?path=%%2Fdefinitions%%2Fwindows.yaml^&version=GBmaster^&line=96^&lineStyle=plain^&lineEnd=97^&lineStartColumn=1^&lineEndColumn=1
