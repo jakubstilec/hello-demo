@@ -1,0 +1,132 @@
+variables:
+  Build.Repository.Clean: true
+  _HelixType: build/product
+  _HelixSource: pr/chcosta/hello-demo/$(Build.SourceBranch)
+  _enableTelemetry: true
+
+resources:
+  containers:
+  - container: LinuxContainer
+    image: microsoft/dotnet-buildtools-prereqs:ubuntu-14.04-cross-0cd4667-20170319080304
+
+trigger:
+- master
+
+# To be added in the future when VSTS supports this feature
+# pr:
+# - master
+
+# Three phases for each of the three OSes we want to run on
+phases:
+- template: /eng/common/templates/phases/base.yml
+  parameters:
+    name: Windows_NT
+    enableTelemetry: $(_enableTelemetry)
+    enableMicrobuild: true
+    queue:
+      # For public or PR jobs, use the hosted pool.  For internal jobs use the internal pool.
+      # Will eventually change this to two BYOC pools.
+      ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
+        name: dotnet-external-temp
+      ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        name: dotnet-internal-temp
+      parallel: 99
+      matrix:
+        debug_configuration:
+          _BuildConfig: Debug
+        release_configuration:
+          _BuildConfig: Release
+    steps:
+    - script: eng\common\cibuild.cmd
+        -configuration $(_BuildConfig)
+        -prepareMachine
+        /p:DotNetSignType=test
+        /p:TeamName=DotNetCore
+      name: Build
+      displayName: Build
+      condition: succeeded()
+    - template: /eng/common/templates/steps/helix-publish.yml
+      parameters:
+        HelixSource: pr/your/helix/source # sources must start with pr/, official/, prodcon/, or agent/
+        HelixType: type/tests
+        # HelixBuild: $(Build.BuildNumber) -- This property is set by default
+        HelixTargetQueues: Windows.10.Amd64.Open;Windows.7.Amd64.Open
+        HelixAccessToken: $(BotAccount-dotnet-github-anon-kaonashi-bot-helix-token)
+        # HelixPreCommands: '' -- any commands that you would like to run prior to running your job
+        # HelixPostCommands: '' -- any commands that you would like to run after running your job
+        WorkItemDirectory: $(Build.SourcesDirectory)/artifacts/bin/test/$(_BuildConfig)/netcoreapp2.0
+        WorkItemCommand: runtests.cmd
+        EnableXUnitReporter: true # required for reporting out XUnit test results
+        # WaitForWorkItemCompletion: true -- defaults to true
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Logs to VSTS
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)'
+        PublishLocation: Container
+        ArtifactName: $(Agent.Os)_$(Agent.JobName)
+      continueOnError: true
+      condition: always()
+    variables:
+      _HelixBuildConfig: $(_BuildConfig)
+      _SignType: test
+
+#- template: /eng/common/templates/phases/base.yml
+#  parameters:
+#    name: OSX
+#    enableTelemetry: $(_enableTelemetry)
+#    queue:
+#      name: Hosted macOS Preview
+#      parallel: 99
+#      matrix:
+#        debug_configuration:
+#          _BuildConfig: Debug
+#        release_configuration:
+#          _BuildConfig: Release
+#    steps:
+#    - script: eng/common/cibuild.sh
+#        --configuration $(_BuildConfig)
+#        --prepareMachine
+#      name: Build
+#      displayName: Build
+#      condition: succeeded()
+#    - task: PublishBuildArtifacts@1
+#      displayName: Publish Logs to VSTS
+#      inputs:
+#        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)'
+#        PublishLocation: Container
+#        ArtifactName: $(Agent.Os)_$(Agent.JobName)
+#      continueOnError: true
+#      condition: always()
+#    variables:
+#      _HelixBuildConfig: $(_BuildConfig)
+#
+#- template: /eng/common/templates/phases/base.yml
+#  parameters:
+#    name: Linux
+#    enableTelemetry: $(_enableTelemetry)
+#    queue:
+#      name: Hosted Ubuntu 1604
+#      parallel: 99
+#      container: LinuxContainer
+#      matrix:
+#        debug_configuration:
+#          _BuildConfig: Debug
+#        release_configuration:
+#          _BuildConfig: Release
+#    steps:
+#    - script: eng/common/cibuild.sh
+#        --configuration $(_BuildConfig)
+#        --prepareMachine
+#      name: Build
+#      displayName: Build
+#      condition: succeeded()
+#    - task: PublishBuildArtifacts@1
+#      displayName: Publish Logs to VSTS
+#      inputs:
+#        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)'
+#        PublishLocation: Container
+#        ArtifactName: $(Agent.Os)_$(Agent.JobName)
+#      continueOnError: true
+#      condition: always()
+#    variables:
+#      _HelixBuildConfig: $(_BuildConfig)
