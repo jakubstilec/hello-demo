@@ -25,9 +25,11 @@ phases:
     enableMicrobuild: true
     queue:
       ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-        name: buildpool.windows.10.amd64.vs2019.open
+        name: NetCorePublic-Pool
+        queue: BuildPool.Windows.10.Amd64.VS2019.Open
       ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-        name: buildpool.windows.10.amd64.vs2019
+        name: NetCoreInternal-Pool
+        queue: BuildPool.Windows.10.Amd64.VS2019
       parallel: 99
       matrix:
         debug_configuration:
